@@ -2,6 +2,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { spawn } from "node:child_process";
+import { readdirSync, statSync } from "node:fs";
+import { join, basename } from "node:path";
+import { homedir } from "node:os";
 import express from "express";
 import { randomUUID } from "node:crypto";
 
@@ -9,14 +12,39 @@ const PORT = 8090;
 const app = express();
 app.use(express.json());
 
-function runClaudeCode(prompt) {
+function findSessionId(cwd) {
+  try {
+    const projectsDir = join(homedir(), ".claude", "projects");
+    const cwdHash = cwd.replace(/\//g, "-");
+    const projectDir = join(projectsDir, cwdHash);
+    const files = readdirSync(projectDir)
+      .filter((f) => f.endsWith(".jsonl"))
+      .map((f) => ({
+        name: f,
+        mtime: statSync(join(projectDir, f)).mtimeMs,
+      }))
+      .sort((a, b) => b.mtime - a.mtime);
+    if (files.length === 0) return null;
+    return basename(files[0].name, ".jsonl");
+  } catch {
+    return null;
+  }
+}
+
+function runClaudeCode(prompt, sessionId) {
   return new Promise((resolve, reject) => {
     console.log(`[claude] spawning with prompt: "${prompt.slice(0, 80)}..."`);
-    console.log(`[claude] cwd: ${process.env.CLAUDE_CODE_CWD || process.cwd()}`);
+    const cwd = process.env.CLAUDE_CODE_CWD || process.cwd();
+    console.log(`[claude] cwd: ${cwd}`);
+    if (sessionId) console.log(`[claude] resuming session: ${sessionId}`);
 
-    const proc = spawn("claude", ["-p", prompt, "--dangerously-skip-permissions"], {
+    const args = sessionId
+      ? ["--resume", sessionId, "-p", prompt, "--dangerously-skip-permissions"]
+      : ["-p", prompt, "--dangerously-skip-permissions"];
+
+    const proc = spawn("claude", args, {
       env: { ...process.env },
-      cwd: process.env.CLAUDE_CODE_CWD || process.cwd(),
+      cwd,
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -38,7 +66,8 @@ function runClaudeCode(prompt) {
       if (code !== 0) {
         reject(new Error(`claude exited with code ${code}: ${stderr}`));
       } else {
-        resolve(stdout.trim());
+        const foundSessionId = findSessionId(cwd);
+        resolve(JSON.stringify({ output: stdout.trim(), session_id: foundSessionId }));
       }
     });
 
@@ -89,6 +118,7 @@ app.post("/mcp", async (req, res) => {
           "Use this to run gh CLI commands, read files, or perform any dev task locally.",
         inputSchema: {
           prompt: z.string().describe("The prompt to send to Claude Code"),
+          session_id: z.string().optional().describe("Resume a previous Claude Code session by ID. Omit for a fresh session."),
         },
         annotations: {
           readOnlyHint: false,
@@ -97,11 +127,11 @@ app.post("/mcp", async (req, res) => {
           openWorldHint: true,
         },
       },
-      async ({ prompt }) => {
+      async ({ prompt, session_id }) => {
         console.log(`[tool] run_claude_code called`);
-        const output = await runClaudeCode(prompt);
-        console.log(`[tool] run_claude_code done, output length: ${output.length}`);
-        return { content: [{ type: "text", text: output }] };
+        const result = await runClaudeCode(prompt, session_id);
+        console.log(`[tool] run_claude_code done, result length: ${result.length}`);
+        return { content: [{ type: "text", text: result }] };
       }
     );
 
