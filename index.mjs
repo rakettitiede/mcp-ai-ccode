@@ -111,8 +111,6 @@ const mcpSessions = {};
 
 app.post("/mcp", async (req, res) => {
   const sessionId = req.headers["mcp-session-id"];
-  console.log(`[mcp] POST /mcp sessionId=${sessionId || "none"} method=${req.body?.method}`);
-
   try {
     if (sessionId && !mcpSessions[sessionId]) {
       console.log(`[mcp] unknown session ${sessionId} — returning 404 to force re-init`);
@@ -121,12 +119,10 @@ app.post("/mcp", async (req, res) => {
     }
 
     if (sessionId && mcpSessions[sessionId]) {
-      console.log(`[mcp] reusing session ${sessionId}`);
       await mcpSessions[sessionId].transport.handleRequest(req, res, req.body);
       return;
     }
 
-    console.log(`[mcp] creating new session`);
     const newSessionId = randomUUID();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => newSessionId,
@@ -205,7 +201,7 @@ app.post("/mcp", async (req, res) => {
 });
 
 // Health check
-app.get("/", (req, res) => {
+app.get("/", (_, res) => {
   res.json({ ok: true, service: "claude-code-mcp-server", version: "1.0.0" });
 });
 
