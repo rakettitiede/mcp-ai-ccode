@@ -56,7 +56,6 @@ function runClaudeCode(prompt, sessionId) {
   let stderr = "";
 
   proc.stdout.on("data", (chunk) => {
-    console.log(`📝 ${shortId(jobId)} stdout: ${chunk.toString().slice(0, 100)}`);
     stdout += chunk;
   });
 
