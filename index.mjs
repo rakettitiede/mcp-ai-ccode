@@ -37,7 +37,8 @@ function runClaudeCode(prompt, sessionId) {
   const jobId = randomUUID();
   const cwd = process.env.CLAUDE_CODE_CWD || process.cwd();
 
-  console.log(`🚀 ${shortId(jobId)} spawn cwd=${cwd} prompt="${prompt.slice(0, 80)}..."`);
+  console.log(`🚀 ${shortId(jobId)} spawn cwd=${cwd}`);
+  console.log(`🚀 ${shortId(jobId)} spawn prompt="${prompt.slice(0, 80)}..."`);
   if (sessionId) console.log(`🚀 ${shortId(jobId)} resuming session=${sessionId}`);
 
   const args = sessionId
