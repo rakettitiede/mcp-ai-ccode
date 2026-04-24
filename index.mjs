@@ -9,6 +9,7 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 
 const PORT = 8090;
+const shortId = (id) => `[${id.slice(-8)}]`;
 const jobStatus = new Map(); // job_id -> { status, output?, error?, exit_code?, session_id?, startedAt }
 const app = express();
 app.use(express.json());
@@ -36,8 +37,8 @@ function runClaudeCode(prompt, sessionId) {
   const jobId = randomUUID();
   const cwd = process.env.CLAUDE_CODE_CWD || process.cwd();
 
-  console.log(`[claude] spawning job=${jobId} cwd=${cwd} prompt="${prompt.slice(0, 80)}..."`);
-  if (sessionId) console.log(`[claude] resuming session: ${sessionId}`);
+  console.log(`🚀 ${shortId(jobId)} spawn cwd=${cwd} prompt="${prompt.slice(0, 80)}..."`);
+  if (sessionId) console.log(`🚀 ${shortId(jobId)} resuming session=${sessionId}`);
 
   const args = sessionId
     ? ["--resume", sessionId, "-p", prompt, "--dangerously-skip-permissions"]
@@ -55,17 +56,17 @@ function runClaudeCode(prompt, sessionId) {
   let stderr = "";
 
   proc.stdout.on("data", (chunk) => {
-    console.log(`[claude ${jobId}] stdout: ${chunk.toString().slice(0, 100)}`);
+    console.log(`📝 ${shortId(jobId)} stdout: ${chunk.toString().slice(0, 100)}`);
     stdout += chunk;
   });
 
   proc.stderr.on("data", (chunk) => {
-    console.log(`[claude ${jobId}] stderr: ${chunk.toString().slice(0, 100)}`);
+    console.log(`⚠️ ${shortId(jobId)} stderr: ${chunk.toString().slice(0, 100)}`);
     stderr += chunk;
   });
 
   proc.on("close", (code) => {
-    console.log(`[claude ${jobId}] exit ${code}`);
+    console.log(`${code === 0 ? "✅" : "❌"} ${shortId(jobId)} exit ${code}`);
     const prev = jobStatus.get(jobId) || {};
     if (code === 0) {
       const foundSessionId = findSessionId(cwd);
@@ -87,7 +88,7 @@ function runClaudeCode(prompt, sessionId) {
   });
 
   proc.on("error", (err) => {
-    console.error(`[claude ${jobId}] spawn error:`, err);
+    console.error(`❌ ${shortId(jobId)} spawn error:`, err);
     const prev = jobStatus.get(jobId) || {};
     jobStatus.set(jobId, {
       ...prev,
@@ -153,9 +154,7 @@ app.post("/mcp", async (req, res) => {
         },
       },
       async ({ prompt, session_id }) => {
-        console.log(`[tool] run_claude_code called`);
         const result = runClaudeCode(prompt, session_id);
-        console.log(`[tool] run_claude_code returning job=${result.job_id}`);
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       }
     );
@@ -179,8 +178,8 @@ app.post("/mcp", async (req, res) => {
         },
       },
       async ({ job_id }) => {
-        console.log(`[tool] check_status job=${job_id}`);
         const result = checkStatus(job_id);
+        console.log(`🔎 ${shortId(job_id)} status=${result.status}`);
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       }
     );
