@@ -65,10 +65,10 @@ function runClaudeCode(prompt, sessionId) {
   });
 
   proc.on("close", (code) => {
-    console.log(`${code === 0 ? "✅" : "❌"} ${shortId(jobId)} exit ${code}`);
     const prev = jobStatus.get(jobId) || {};
+    const foundSessionId = findSessionId(cwd);
     if (code === 0) {
-      const foundSessionId = findSessionId(cwd);
+      console.log(`🟢 ${shortId(jobId)} done — session=${foundSessionId ?? "unknown"}`);
       jobStatus.set(jobId, {
         ...prev,
         status: "done",
@@ -77,17 +77,19 @@ function runClaudeCode(prompt, sessionId) {
         session_id: foundSessionId,
       });
     } else {
+      console.log(`🔴 ${shortId(jobId)} failed (exit ${code}) — session=${foundSessionId ?? "unknown"}`);
       jobStatus.set(jobId, {
         ...prev,
         status: "failed",
         error: stderr.trim() || `exit code ${code}`,
         exit_code: code,
+        session_id: foundSessionId,
       });
     }
   });
 
   proc.on("error", (err) => {
-    console.error(`❌ ${shortId(jobId)} spawn error:`, err);
+    console.error(`🔴 ${shortId(jobId)} spawn error: ${err?.message || err}`);
     const prev = jobStatus.get(jobId) || {};
     jobStatus.set(jobId, {
       ...prev,
@@ -178,7 +180,7 @@ app.post("/mcp", async (req, res) => {
       },
       async ({ job_id }) => {
         const result = checkStatus(job_id);
-        console.log(`🔎 ${shortId(job_id)} status=${result.status}`);
+        console.log(`🔎 ${shortId(job_id)} status=${result.status}${result.session_id ? ` (session=${result.session_id})` : ""}`);
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       }
     );
