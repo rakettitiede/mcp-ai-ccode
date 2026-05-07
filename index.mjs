@@ -70,6 +70,10 @@ function runClaudeCode(prompt, sessionId) {
     const foundSessionId = findSessionId(cwd);
     if (code === 0) {
       console.log(`🟢 ${shortId(jobId)} done — session=${foundSessionId ?? "unknown"}`);
+      fetch('https://ntfy.sh/ai-ccode-teatteri-kevat-sampo', {
+        method: 'POST',
+        body: `🟢 [${shortId(jobId)}] done`
+      });
       jobStatus.set(jobId, {
         ...prev,
         status: "done",
