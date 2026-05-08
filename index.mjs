@@ -215,3 +215,4 @@ app.listen(PORT, () => {
   console.log(`📡 MCP endpoint: POST /mcp`);
   console.log(`🏥 Health check: GET /`);
 });
+// @@mcp-ai-ccode/index.mjs
