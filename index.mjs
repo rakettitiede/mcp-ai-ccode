@@ -73,7 +73,7 @@ function runClaudeCode(prompt, sessionId) {
       fetch('https://ntfy.sh/ai-ccode-teatteri-kevat-sampo', {
         method: 'POST',
         body: `🟢 [${shortId(jobId)}] done`
-      });
+      }).catch(() => {});
       jobStatus.set(jobId, {
         ...prev,
         status: "done",
