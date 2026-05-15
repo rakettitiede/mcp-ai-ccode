@@ -1,105 +1,113 @@
 # ai-ccode
 
-A personal MCP bridge that connects Claude.ai web chat to a Claude Code CLI session running on this machine.
-
-> **Personal tool** — this is not part of the shared ai-talent ecosystem. It is owned and operated by the person who set it up, and is not deployed to any shared infrastructure.
->
-> **Current operator:** Nicoandres Restrepo (nicoandres@rakettitiede.com) — if you need to take over or set up your own instance, see the setup instructions below.
+A minimal MCP bridge that connects any Claude interface to a Claude Code CLI session running on your local machine.
 
 ## What it does
 
-Exposes two MCP tools to Claude.ai:
+Exposes two MCP tools:
 
-- **`run_claude_code(prompt, session_id?)`** — spawns `claude -p "<prompt>"` asynchronously and returns `{ job_id, status: "running" }` immediately
-- **`check_status(job_id)`** — reads the result after the job finishes, returns `{ status, output, exit_code, session_id }`
+- **`run_claude_code(prompt, session_id?)`** — spawns `claude -p "<prompt>"` asynchronously, returns `{ job_id, status: "running" }` immediately
+- **`check_status(job_id)`** — reads the result once the job finishes, returns `{ status, output, exit_code, session_id }`
 
-This lets Claude.ai delegate code writing, git operations, and `gh` CLI work directly to Claude Code — without copy-pasting prompts.
+This lets Claude delegate code writing, git operations, and `gh` CLI work directly to Claude Code — without copy-pasting prompts.
 
 ## How it works
 
 ```
-Claude.ai (browser)
+Claude (browser / CLI / desktop)
     ↓  MCP tool call over HTTPS
-nicoandres-ai.dev  ← Cloudflare (paid domain)
-    ↓  Cloudflare Named Tunnel (free)
+your-domain.com  ← public HTTPS endpoint (see Cloudflare setup below)
+    ↓  Cloudflare Tunnel
     ↓  TCP → localhost:8080
-ai-ccode Express server  ← this repo, running locally
+ai-ccode Express server  ← this repo, running on your machine
     ↓  child_process spawn
 claude -p "<prompt>"  ← Claude Code CLI
     ↓  stdout captured async
-check_status(job_id)  ← polled by Claude.ai after user pings
+check_status(job_id)  ← polled after job finishes
 ```
 
-## Cloudflare setup
+## Prerequisites
 
-Two components make the stable HTTPS URL possible:
+- [Node.js](https://nodejs.org/) (v18+)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
+- [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) for the tunnel
 
-### Named Tunnel — free tier
-
-A persistent Cloudflare tunnel forwards traffic from the edge to `localhost:8080`. Runs as a background process on the laptop.
+## Installation
 
 ```bash
-# Install cloudflared
-# https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+git clone https://github.com/rakettitiede/ai-ccode.git
+cd ai-ccode
+npm install
+npm start
+# → Listening on :8080
+```
 
+## Exposing via Cloudflare Tunnel
+
+The MCP endpoint must be reachable over HTTPS. Cloudflare Tunnel handles this without opening firewall ports.
+
+### Option A — Free tier (random URL)
+
+```bash
+cloudflared tunnel --url http://localhost:8080
+# → https://random-name.trycloudflare.com
+```
+
+The URL changes every time you restart the tunnel. Use this for testing.
+
+### Option B — Named tunnel with custom domain (stable URL)
+
+A stable URL requires a Cloudflare account and a registered domain (can be purchased via [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/) for ~$10/year).
+
+```bash
 # Authenticate
 cloudflared tunnel login
 
-# The named tunnel (already created — nicoandresr-dev)
-# Tunnel ID: 630b1f4f-2f5f-48dd-ac99-bdc7fc66f0a1
+# Create a named tunnel
+cloudflared tunnel create my-bridge
+
+# Route your domain to the tunnel
+cloudflared tunnel route dns my-bridge mcp.your-domain.com
 
 # Start the tunnel
-cloudflared tunnel run nicoandresr-dev
+cloudflared tunnel run my-bridge
 ```
 
-### Custom domain — paid (`nicoandres-ai.dev`)
+The tunnel URL (`https://mcp.your-domain.com`) stays stable across restarts. Use this for production use.
 
-Routes `nicoandres-ai.dev` to the tunnel. Purchased via Cloudflare Registrar (~$10/year). Without it, the tunnel URL would be a random `*.trycloudflare.com` that changes on restart.
+## Connect to Claude
 
-DNS record (set once in Cloudflare dashboard):
-```
-CNAME  nicoandres-ai.dev  →  630b1f4f-2f5f-48dd-ac99-bdc7fc66f0a1.cfargotunnel.com
-```
-
-The result: `https://nicoandres-ai.dev/mcp` is the stable MCP endpoint Claude.ai connects to.
-
-## Local setup
-
-```bash
-# Prerequisites
-# - Node.js (nvm use)
-# - Claude Code CLI installed and authenticated (claude --version)
-# - cloudflared installed and tunnel configured (see above)
-
-npm install
-
-# Start the server
-npm start
-# → Listening on :8080
-
-# In a separate terminal, start the tunnel
-cloudflared tunnel run nicoandresr-dev
-# → Connection established
-
-# Verify
-curl http://localhost:8080/
-# → {"ok":true}
-```
-
-## Connect to Claude.ai
-
-In the Claude.ai project settings → MCP connector:
+In your Claude project settings → MCP connector:
 
 ```
-URL: https://nicoandres-ai.dev/mcp
+URL: https://your-tunnel-url/mcp
 ```
 
-Claude.ai will discover the `run_claude_code` and `check_status` tools automatically.
+Claude will discover the `run_claude_code` and `check_status` tools automatically.
 
 ## Session management
 
-Claude Code sessions persist across multiple `run_claude_code` calls via the `session_id` returned by `check_status`. Pass it to the next call to resume the same session — preserves working directory, tool context, and in-memory state.
+Claude Code sessions persist across multiple `run_claude_code` calls via the `session_id` returned by `check_status`. Pass it to the next call to resume the same session — preserves working directory, in-memory state, and tool context.
 
-## YubiKey note
+```
+# First call
+run_claude_code("git status") → { job_id: "abc...", status: "running" }
+check_status("abc...") → { status: "done", session_id: "xyz..." }
 
-Git push and SSH operations require a YubiKey touch. The SSH multiplexer is configured for 3-hour sessions — first touch caches credentials for all subsequent operations within the window.
+# Resume same session
+run_claude_code("git add -A && git commit -m 'fix'", session_id: "xyz...")
+```
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `8080` | Port for the Express server |
+
+## YubiKey / SSH note
+
+Git push and SSH operations require hardware key authentication if configured. With SSH multiplexing, a single touch caches credentials for the session duration — subsequent operations within the window don't re-prompt.
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).
