@@ -2,7 +2,9 @@
 
 A personal MCP bridge that connects Claude.ai web chat to a Claude Code CLI session running on this machine.
 
-> **Personal tool** — this is not part of the shared ai-talent ecosystem. It belongs to Nicoandres and is not deployed to any shared infrastructure.
+> **Personal tool** — this is not part of the shared ai-talent ecosystem. It is owned and operated by the person who set it up, and is not deployed to any shared infrastructure.
+>
+> **Current operator:** Nicoandres Restrepo (nicoandres@rakettitiede.com) — if you need to take over or set up your own instance, see the setup instructions below.
 
 ## What it does
 
