@@ -4,11 +4,11 @@ version: 1.0.0
 description: Workflow rules and discipline for using @rakettitiede/mcp-ai-ccode — the Claude Code MCP bridge — run_claude_code and check_status tools. Use whenever about to call a ccode tool, when reporting on a finished ccode job, or when planning multi-step work that will involve ccode. Covers what the bridge is, the fire-and-forget async contract, the no-polling rule, job_id reporting convention, session_id resume, YubiKey/git ops discipline, preflight convention, optimistic programming inside ccode prompts, and fade-out recovery.
 ---
 
-# Claude Code (ccode) bridge
+# Claude Code (mcp-ai-ccode) bridge
 
-## What is ai-ccode?
+## What is mcp-ai-ccode?
 
-ai-ccode is a personal MCP bridge that connects a Claude interface (web, CLI, or desktop) to a Claude Code CLI session running on the bridge operator's local machine. It is not part of the shared ai-talent ecosystem — it is a personal productivity tool set up by whoever runs it.
+mcp-ai-ccode is a personal MCP bridge that connects a Claude interface (web, CLI, or desktop) to a Claude Code CLI session running on the bridge operator's local machine. It is not part of the shared ai-talent ecosystem — it is a personal productivity tool set up by whoever runs it.
 
 The bridge exposes two MCP tools to Claude:
 - **`run_claude_code(prompt, session_id?)`** — spawns `claude -p "<prompt>"` asynchronously on the operator's machine, returns `{ job_id, status: "running" }` immediately
