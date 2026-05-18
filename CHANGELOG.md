@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/rakettitiede/mcp-ai-ccode/compare/v1.0.0...v1.0.1) (2026-05-18)
+
+
+### Bug Fixes
+
+* add publishConfig access public for scoped npm package ([#6](https://github.com/rakettitiede/mcp-ai-ccode/issues/6)) ([bf1086c](https://github.com/rakettitiede/mcp-ai-ccode/commit/bf1086c42652a235fccd9130203080f51872dd1c))
+
 ## 1.0.0 (2026-05-18)
 
 
