@@ -1,7 +1,7 @@
 ---
-name: ccode
+name: mcp-ai-ccode
 version: 1.0.0
-description: Workflow rules and discipline for using the ccode (Claude Code) MCP bridge — run_claude_code and check_status tools. Use whenever about to call a ccode tool, when reporting on a finished ccode job, or when planning multi-step work that will involve ccode. Covers what the bridge is, the fire-and-forget async contract, the no-polling rule, job_id reporting convention, session_id resume, YubiKey/git ops discipline, preflight convention, optimistic programming inside ccode prompts, and fade-out recovery.
+description: Workflow rules and discipline for using @rakettitiede/mcp-ai-ccode — the Claude Code MCP bridge — run_claude_code and check_status tools. Use whenever about to call a ccode tool, when reporting on a finished ccode job, or when planning multi-step work that will involve ccode. Covers what the bridge is, the fire-and-forget async contract, the no-polling rule, job_id reporting convention, session_id resume, YubiKey/git ops discipline, preflight convention, optimistic programming inside ccode prompts, and fade-out recovery.
 ---
 
 # Claude Code (ccode) bridge

@@ -1,5 +1,5 @@
 {
-  "name": "claude-code-mcp-server",
+  "name": "@rakettitiede/mcp-ai-ccode",
   "version": "1.0.0",
   "description": "Local MCP server that bridges Claude.ai to Claude Code CLI",
   "type": "module",
